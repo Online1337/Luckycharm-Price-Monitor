@@ -2,10 +2,10 @@ name: LuckyCharmGold Price Monitor
 
 on:
   schedule:
-    # Run at :07 and :37 every hour = every 30 minutes.
+    # Check every 15 minutes, offset from the busiest cron times.
     - cron: "7,22,37,52 * * * *"
 
-  # Also gives us a button to test the monitor manually.
+  # Allows manual testing from the GitHub Actions page.
   workflow_dispatch:
 
 permissions:
