@@ -2,10 +2,13 @@ name: LuckyCharmGold Price Monitor
 
 on:
   schedule:
-    # Check every 15 minutes, offset from the busiest cron times.
+    # Check every 15 minutes.
+    #
+    # Using :07, :22, :37 and :52 avoids the busiest
+    # start-of-hour GitHub Actions scheduling period.
     - cron: "7,22,37,52 * * * *"
 
-  # Allows manual testing from the GitHub Actions page.
+  # Allows manual testing from GitHub Actions.
   workflow_dispatch:
 
 permissions:
@@ -21,12 +24,13 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
+          package-manager-cache: false
 
       - name: Install Playwright
         run: |
@@ -34,41 +38,71 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Check LuckyCharmGold price
+        id: price-check
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: node monitor.mjs
 
-      - name: Upload debug screenshot if monitor failed
+      # If all 3 retrieval attempts fail, monitor.mjs
+      # saves both debug.png and debug.html.
+      #
+      # Upload them to the failed GitHub Actions run
+      # so the website can be inspected later.
+      - name: Upload diagnostics if monitor failed
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: luckycharm-debug
-          path: debug.png
+          path: |
+            debug.png
+            debug.html
           if-no-files-found: ignore
-          retention-days: 3
+          retention-days: 7
 
+      # Public repository schedules can eventually be
+      # disabled if the repository has no activity.
+      #
+      # This creates at most one heartbeat change per month.
       - name: Monthly keepalive
-        if: success()
+        if: always()
         shell: bash
         run: |
           MONTH="$(date -u +'%Y-%m')"
 
           if [ ! -f heartbeat.txt ] || [ "$(cat heartbeat.txt)" != "$MONTH" ]; then
             echo "$MONTH" > heartbeat.txt
+            echo "Monthly heartbeat updated."
+          else
+            echo "Monthly heartbeat already current."
           fi
 
-      - name: Save latest price
-        if: success()
+      # Run this EVEN when the price check fails.
+      #
+      # This is important because the script needs to save
+      # outageActive=true after the first failure. Otherwise
+      # every failed 15-minute run would send another alert.
+      - name: Save monitor state
+        if: always()
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add state.json heartbeat.txt
+          if [ -f state.json ]; then
+            git add state.json
+          fi
+
+          if [ -f price-history.csv ]; then
+            git add price-history.csv
+          fi
+
+          if [ -f heartbeat.txt ]; then
+            git add heartbeat.txt
+          fi
 
           if git diff --cached --quiet; then
-            echo "No state changes to commit."
+            echo "No meaningful monitor changes to commit."
           else
-            git commit -m "Update price monitor state"
+            git commit -m "Update LuckyCharmGold monitor state"
             git push
           fi
