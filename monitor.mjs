@@ -6,7 +6,7 @@ const STATE_FILE = "state.json";
 const WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
 
 // Replace this with your actual Discord User ID.
-const DISCORD_USER_ID = "PASTE_YOUR_USER_ID_HERE";
+const DISCORD_USER_ID = "905941622196428901";
 const MENTION = `<@${DISCORD_USER_ID}>`;
 
 if (!WEBHOOK) {
