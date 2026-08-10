@@ -5,6 +5,9 @@ const URL = "https://luckycharmgold.com/sell-osrs-gold";
 const STATE_FILE = "state.json";
 const WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
 
+const DISCORD_USER_ID = "905941622196428901";
+const MENTION = `<@${DISCORD_USER_ID}>`;
+
 if (!WEBHOOK) {
   throw new Error("DISCORD_WEBHOOK_URL GitHub secret is missing.");
 }
@@ -45,10 +48,17 @@ async function sendDiscord(message) {
     body: JSON.stringify({
       content: message,
       allowed_mentions: {
-        parse: []
+        users: [DISCORD_USER_ID]
       }
     })
   });
+
+  if (!response.ok) {
+    throw new Error(
+      `Discord webhook failed: ${response.status} ${response.statusText}`
+    );
+  }
+}
 
   if (!response.ok) {
     throw new Error(
@@ -144,24 +154,31 @@ try {
 
     console.log("Initial price recorded.");
 
-  } else if (previousPrice !== currentPrice) {
-    const oldNumber = Number(previousPrice);
-    const newNumber = Number(currentPrice);
+} else if (previousPrice !== currentPrice) {
+  const oldNumber = Number(previousPrice);
+  const newNumber = Number(currentPrice);
 
-    let direction = "🔵";
+  let direction;
+  let directionEmoji;
 
-    if (newNumber > oldNumber) {
-      direction = "🟢";
-    } else if (newNumber < oldNumber) {
-      direction = "🔴";
-    }
+  if (newNumber > oldNumber) {
+    direction = "increased";
+    directionEmoji = "🟢";
+  } else {
+    direction = "decreased";
+    directionEmoji = "🔴";
+  }
 
-    await sendDiscord(
-      `${direction} **LuckyCharmGold OSRS sell price changed**\n` +
-      `**$${previousPrice}/M → $${currentPrice}/M**\n` +
-      `Checked: ${checkedAt}\n` +
-      `<${URL}>`
-    );
+  const difference = Math.abs(newNumber - oldNumber).toFixed(3);
+
+  await sendDiscord(
+    `${MENTION}\n` +
+    `${directionEmoji} **LuckyCharmGold OSRS sell price ${direction}**\n\n` +
+    `The sell price has **${direction} to $${currentPrice}/M** ` +
+    `from **$${previousPrice}/M** since the last change.\n\n` +
+    `Change: **$${difference}/M**\n` +
+    `<${URL}>`
+  );
 
     console.log(
       `PRICE CHANGE: $${previousPrice}/M -> $${currentPrice}/M`
