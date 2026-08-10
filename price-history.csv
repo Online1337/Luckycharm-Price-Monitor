@@ -1,0 +1,3 @@
+timestamp,price,previous_price,direction,change_amount,percent_change,record_status
+2026-08-10T12:12:35.972Z,0.205,,baseline,,,monitoring baseline
+2026-08-10T12:21:09.769Z,0.210,0.205,increased,+0.005,+2.44%,matched all-time high
