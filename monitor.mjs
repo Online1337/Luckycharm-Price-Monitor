@@ -5,6 +5,7 @@ const URL = "https://luckycharmgold.com/sell-osrs-gold";
 const STATE_FILE = "state.json";
 const WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
 
+// Replace this with your actual Discord User ID
 const DISCORD_USER_ID = "905941622196428901";
 const MENTION = `<@${DISCORD_USER_ID}>`;
 
@@ -60,13 +61,6 @@ async function sendDiscord(message) {
   }
 }
 
-  if (!response.ok) {
-    throw new Error(
-      `Discord webhook failed: ${response.status} ${response.statusText}`
-    );
-  }
-}
-
 let browser;
 
 try {
@@ -90,8 +84,8 @@ try {
   let pageText = await page.locator("body").innerText();
   let currentPrice = extractUsdPrice(pageText);
 
-  // If LuckyCharmGold loads a non-USD currency,
-  // try to switch the page to USD.
+  // LuckyCharmGold may load in EUR/GBP depending on location.
+  // If USD is not found, try switching the site's currency to USD.
   if (!currentPrice) {
     const currencySelector = page.getByText(
       /^(USD \(\$\)|EUR \(€\)|GBP \(£\))$/,
@@ -154,31 +148,32 @@ try {
 
     console.log("Initial price recorded.");
 
-} else if (previousPrice !== currentPrice) {
-  const oldNumber = Number(previousPrice);
-  const newNumber = Number(currentPrice);
+  } else if (previousPrice !== currentPrice) {
+    const oldNumber = Number(previousPrice);
+    const newNumber = Number(currentPrice);
 
-  let direction;
-  let directionEmoji;
+    let direction;
+    let directionEmoji;
 
-  if (newNumber > oldNumber) {
-    direction = "increased";
-    directionEmoji = "🟢";
-  } else {
-    direction = "decreased";
-    directionEmoji = "🔴";
-  }
+    if (newNumber > oldNumber) {
+      direction = "increased";
+      directionEmoji = "🟢";
+    } else {
+      direction = "decreased";
+      directionEmoji = "🔴";
+    }
 
-  const difference = Math.abs(newNumber - oldNumber).toFixed(3);
+    const difference = Math.abs(newNumber - oldNumber).toFixed(3);
 
-  await sendDiscord(
-    `${MENTION}\n` +
-    `${directionEmoji} **LuckyCharmGold OSRS sell price ${direction}**\n\n` +
-    `The sell price has **${direction} to $${currentPrice}/M** ` +
-    `from **$${previousPrice}/M** since the last change.\n\n` +
-    `Change: **$${difference}/M**\n` +
-    `<${URL}>`
-  );
+    await sendDiscord(
+      `${MENTION}\n` +
+      `${directionEmoji} **LuckyCharmGold OSRS sell price ${direction}**\n\n` +
+      `The sell price has **${direction} to $${currentPrice}/M** ` +
+      `from **$${previousPrice}/M** since the last change.\n\n` +
+      `Change: **$${difference}/M**\n` +
+      `Checked: ${checkedAt}\n` +
+      `<${URL}>`
+    );
 
     console.log(
       `PRICE CHANGE: $${previousPrice}/M -> $${currentPrice}/M`
@@ -203,12 +198,14 @@ try {
 } catch (error) {
   console.error(error);
 
-  // Try to notify Discord that the monitor itself has failed.
+  // Notify Discord if the monitor cannot retrieve the price
+  // or otherwise fails.
   try {
     const failedAt = new Date().toISOString();
 
     await sendDiscord(
-      `⚠️ **LuckyCharmGold price monitor failed**\n` +
+      `${MENTION}\n` +
+      `⚠️ **LuckyCharmGold price monitor failed**\n\n` +
       `I could not retrieve the OSRS sell price.\n\n` +
       `**Error:** ${error.message}\n` +
       `Failed at: ${failedAt}\n` +
