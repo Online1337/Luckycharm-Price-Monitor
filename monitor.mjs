@@ -80,9 +80,8 @@ try {
   let pageText = await page.locator("body").innerText();
   let currentPrice = extractUsdPrice(pageText);
 
-  // LuckyCharmGold can choose EUR/GBP/etc. based on location.
-  // If the page isn't already displaying USD, open the currency
-  // selector and explicitly select USD.
+  // If LuckyCharmGold loads a non-USD currency,
+  // try to switch the page to USD.
   if (!currentPrice) {
     const currencySelector = page.getByText(
       /^(USD \(\$\)|EUR \(€\)|GBP \(£\))$/,
@@ -186,6 +185,26 @@ try {
 
 } catch (error) {
   console.error(error);
+
+  // Try to notify Discord that the monitor itself has failed.
+  try {
+    const failedAt = new Date().toISOString();
+
+    await sendDiscord(
+      `⚠️ **LuckyCharmGold price monitor failed**\n` +
+      `I could not retrieve the OSRS sell price.\n\n` +
+      `**Error:** ${error.message}\n` +
+      `Failed at: ${failedAt}\n` +
+      `<${URL}>\n\n` +
+      `Check the latest GitHub Actions run for details.`
+    );
+  } catch (discordError) {
+    console.error(
+      "Could not send failure notification to Discord:",
+      discordError
+    );
+  }
+
   process.exitCode = 1;
 
 } finally {
