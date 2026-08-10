@@ -5,8 +5,8 @@ const URL = "https://luckycharmgold.com/sell-osrs-gold";
 const STATE_FILE = "state.json";
 const WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
 
-// Replace this with your actual Discord User ID
-const DISCORD_USER_ID = "905941622196428901";
+// Replace this with your actual Discord User ID.
+const DISCORD_USER_ID = "PASTE_YOUR_USER_ID_HERE";
 const MENTION = `<@${DISCORD_USER_ID}>`;
 
 if (!WEBHOOK) {
@@ -124,7 +124,10 @@ try {
   console.log(`Current LuckyCharmGold USD sell price: $${currentPrice}/M`);
 
   let previousPrice = null;
+  let allTimeHigh = null;
+  let allTimeLow = null;
 
+  // Read previous state if it exists.
   if (fs.existsSync(STATE_FILE)) {
     try {
       const state = JSON.parse(
@@ -132,30 +135,55 @@ try {
       );
 
       previousPrice = state.price ?? null;
+      allTimeHigh = state.allTimeHigh ?? null;
+      allTimeLow = state.allTimeLow ?? null;
     } catch {
       console.log("Existing state.json could not be read.");
     }
   }
 
-  const checkedAt = new Date().toISOString();
+  const currentNumber = Number(currentPrice);
+
+  /*
+   * MIGRATION / FIRST RUN OF THIS VERSION
+   *
+   * Older versions of state.json only contained "price".
+   * If allTimeHigh/allTimeLow do not exist yet, initialise both
+   * using the current genuine LuckyCharmGold price.
+   *
+   * This means the earlier fake $0.209 test will not become the
+   * monitor's permanent all-time low.
+   */
+  if (allTimeHigh === null) {
+    allTimeHigh = currentPrice;
+  }
+
+  if (allTimeLow === null) {
+    allTimeLow = currentPrice;
+  }
+
+  let highNumber = Number(allTimeHigh);
+  let lowNumber = Number(allTimeLow);
 
   if (previousPrice === null) {
+    // Completely fresh monitor.
+    allTimeHigh = currentPrice;
+    allTimeLow = currentPrice;
+
     await sendDiscord(
       `✅ **LuckyCharmGold monitor started**\n` +
-      `Current OSRS sell price: **$${currentPrice}/M**\n` +
-      `<${URL}>`
+      `Current OSRS sell price: **$${currentPrice}/M**`
     );
 
     console.log("Initial price recorded.");
 
   } else if (previousPrice !== currentPrice) {
     const oldNumber = Number(previousPrice);
-    const newNumber = Number(currentPrice);
 
     let direction;
     let directionEmoji;
 
-    if (newNumber > oldNumber) {
+    if (currentNumber > oldNumber) {
       direction = "increased";
       directionEmoji = "🟢";
     } else {
@@ -163,32 +191,84 @@ try {
       directionEmoji = "🔴";
     }
 
-    const difference = Math.abs(newNumber - oldNumber).toFixed(3);
+    const difference = Math.abs(
+      currentNumber - oldNumber
+    ).toFixed(3);
+
+    /*
+     * Work out the high/low status BEFORE updating the records.
+     */
+    let recordMessage = "";
+
+    if (currentNumber > highNumber) {
+      recordMessage =
+        `\n\n🏆 **New all-time high since monitoring began!**`;
+      allTimeHigh = currentPrice;
+
+    } else if (currentNumber === highNumber) {
+      recordMessage =
+        `\n\n🔁 **Matched the all-time high since monitoring began.**`;
+
+    } else if (currentNumber < lowNumber) {
+      recordMessage =
+        `\n\n📉 **New all-time low since monitoring began!**`;
+      allTimeLow = currentPrice;
+
+    } else if (currentNumber === lowNumber) {
+      recordMessage =
+        `\n\n🔁 **Matched the all-time low since monitoring began.**`;
+    }
 
     await sendDiscord(
       `${MENTION}\n` +
       `${directionEmoji} **LuckyCharmGold OSRS sell price ${direction}**\n\n` +
       `The sell price has **${direction} to $${currentPrice}/M** ` +
       `from **$${previousPrice}/M** since the last change.\n\n` +
-      `Change: **$${difference}/M**\n` +
-      `Checked: ${checkedAt}\n` +
-      `<${URL}>`
+      `Change: **$${difference}/M**` +
+      recordMessage
     );
 
     console.log(
       `PRICE CHANGE: $${previousPrice}/M -> $${currentPrice}/M`
     );
 
+    /*
+     * If it wasn't caught above, make sure the stored records
+     * remain correct.
+     */
+    if (currentNumber > Number(allTimeHigh)) {
+      allTimeHigh = currentPrice;
+    }
+
+    if (currentNumber < Number(allTimeLow)) {
+      allTimeLow = currentPrice;
+    }
+
   } else {
     console.log("Price unchanged. No Discord notification sent.");
+
+    /*
+     * Safety check: ensure records remain valid even if state.json
+     * was manually edited.
+     */
+    if (currentNumber > Number(allTimeHigh)) {
+      allTimeHigh = currentPrice;
+    }
+
+    if (currentNumber < Number(allTimeLow)) {
+      allTimeLow = currentPrice;
+    }
   }
 
+  // Save the latest price and historical monitor records.
   fs.writeFileSync(
     STATE_FILE,
     JSON.stringify(
       {
         price: currentPrice,
-        checkedAt
+        allTimeHigh: allTimeHigh,
+        allTimeLow: allTimeLow,
+        checkedAt: new Date().toISOString()
       },
       null,
       2
@@ -201,15 +281,11 @@ try {
   // Notify Discord if the monitor cannot retrieve the price
   // or otherwise fails.
   try {
-    const failedAt = new Date().toISOString();
-
     await sendDiscord(
       `${MENTION}\n` +
       `⚠️ **LuckyCharmGold price monitor failed**\n\n` +
       `I could not retrieve the OSRS sell price.\n\n` +
-      `**Error:** ${error.message}\n` +
-      `Failed at: ${failedAt}\n` +
-      `<${URL}>\n\n` +
+      `**Error:** ${error.message}\n\n` +
       `Check the latest GitHub Actions run for details.`
     );
   } catch (discordError) {
