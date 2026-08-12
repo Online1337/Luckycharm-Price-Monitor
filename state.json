@@ -1,5 +1,5 @@
 {
-  "price": "0.185",
+  "price": "0.205",
   "allTimeHigh": "0.210",
   "allTimeLow": "0.185",
   "allTimeHighAt": "2026-08-10T12:12:35.972Z",
@@ -7,5 +7,5 @@
   "outageActive": false,
   "outageStartedAt": null,
   "lastRecoveredAt": null,
-  "lastChangeAt": "2026-08-12T00:07:34.452Z"
+  "lastChangeAt": "2026-08-12T07:48:23.036Z"
 }
