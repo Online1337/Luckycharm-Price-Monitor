@@ -29,3 +29,4 @@ timestamp,price,previous_price,direction,change_amount,percent_change,record_sta
 2026-08-20T00:25:25.351Z,0.225,0.200,increased,+0.025,+12.50%,matched all-time high
 2026-08-20T07:02:53.138Z,0.195,0.225,decreased,-0.030,-13.33%,
 2026-08-20T08:53:28.813Z,0.220,0.195,increased,+0.025,+12.82%,
+2026-08-20T09:47:48.505Z,0.210,0.220,decreased,-0.010,-4.55%,
