@@ -48,3 +48,4 @@ timestamp,price,previous_price,direction,change_amount,percent_change,record_sta
 2026-08-30T17:38:12.878Z,0.210,0.200,increased,+0.010,+5.00%,
 2026-08-31T01:01:51.690Z,0.200,0.210,decreased,-0.010,-4.76%,
 2026-09-02T11:42:26.029Z,0.180,0.200,decreased,-0.020,-10.00%,new all-time low
+2026-09-03T01:25:53.728Z,0.190,0.180,increased,+0.010,+5.56%,
