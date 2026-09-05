@@ -53,3 +53,4 @@ timestamp,price,previous_price,direction,change_amount,percent_change,record_sta
 2026-09-04T01:21:11.890Z,0.190,0.185,increased,+0.005,+2.70%,
 2026-09-04T11:30:12.776Z,0.215,0.190,increased,+0.025,+13.16%,
 2026-09-05T00:54:13.648Z,0.210,0.215,decreased,-0.005,-2.33%,
+2026-09-05T09:29:39.528Z,0.190,0.210,decreased,-0.020,-9.52%,
